@@ -6,7 +6,6 @@ from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
-# Junction Table for RFQ and Vendor
 rfq_vendor_association = Table(
     'rfq_vendor_association',
     Base.metadata,
@@ -20,7 +19,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    role = Column(String, nullable=False)  # admin, officer, manager, vendor
+    role = Column(String, nullable=False)
     password_hash = Column(String, nullable=False)
     vendor_id = Column(Integer, ForeignKey('vendors.id', ondelete='SET NULL'), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -38,7 +37,7 @@ class Vendor(Base):
     email = Column(String, nullable=False)
     phone = Column(String, nullable=False)
     address = Column(Text, nullable=False)
-    status = Column(String, default="Active")  # Active, Inactive
+    status = Column(String, default="Active")
     rating = Column(Float, default=5.0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -53,8 +52,8 @@ class RFQ(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    deadline = Column(String, nullable=False)  # YYYY-MM-DD
-    status = Column(String, default="Draft")  # Draft, Sent, Closed, Cancelled
+    deadline = Column(String, nullable=False)
+    status = Column(String, default="Draft")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     created_by_id = Column(Integer, ForeignKey('users.id'))
 
@@ -70,7 +69,7 @@ class RFQItem(Base):
     item_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     quantity = Column(Float, nullable=False)
-    unit = Column(String, nullable=False)  # pcs, kg, ltr, etc.
+    unit = Column(String, nullable=False)
 
     rfq = relationship("RFQ", back_populates="items")
     quotation_items = relationship("QuotationItem", back_populates="rfq_item", cascade="all, delete-orphan")
@@ -81,8 +80,8 @@ class Quotation(Base):
     id = Column(Integer, primary_key=True, index=True)
     rfq_id = Column(Integer, ForeignKey('rfqs.id', ondelete='CASCADE'), nullable=False)
     vendor_id = Column(Integer, ForeignKey('vendors.id', ondelete='CASCADE'), nullable=False)
-    status = Column(String, default="Draft")  # Draft, Submitted, Shortlisted, Approved, Rejected
-    delivery_timeline = Column(Integer, nullable=False)  # in days
+    status = Column(String, default="Draft")
+    delivery_timeline = Column(Integer, nullable=False)
     notes = Column(Text, nullable=True)
     total_amount = Column(Float, default=0.0)
     submitted_at = Column(DateTime, nullable=True)
@@ -112,7 +111,7 @@ class Approval(Base):
     id = Column(Integer, primary_key=True, index=True)
     quotation_id = Column(Integer, ForeignKey('quotations.id', ondelete='CASCADE'), nullable=False)
     approver_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    decision = Column(String, nullable=False)  # Approved, Rejected
+    decision = Column(String, nullable=False)
     remarks = Column(Text, nullable=True)
     decided_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -128,7 +127,7 @@ class PurchaseOrder(Base):
     subtotal = Column(Float, nullable=False)
     tax = Column(Float, nullable=False)
     total = Column(Float, nullable=False)
-    status = Column(String, default="Draft")  # Draft, Sent, Accepted, Completed
+    status = Column(String, default="Draft")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     quotation = relationship("Quotation", back_populates="purchase_orders")
@@ -144,7 +143,7 @@ class Invoice(Base):
     subtotal = Column(Float, nullable=False)
     tax = Column(Float, nullable=False)
     total = Column(Float, nullable=False)
-    status = Column(String, default="Draft")  # Draft, Sent, Paid
+    status = Column(String, default="Draft")
     emailed_to = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -156,7 +155,7 @@ class ActivityLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     actor_name = Column(String, nullable=False)
     action = Column(String, nullable=False)
-    entity_type = Column(String, nullable=False)  # User, Vendor, RFQ, Quotation, PO, Invoice
+    entity_type = Column(String, nullable=False)
     entity_id = Column(Integer, nullable=True)
     details = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
