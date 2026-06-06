@@ -169,8 +169,8 @@ class ActivityLogResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Simulated Email Schema
-class SimulatedEmailResponse(BaseModel):
+# Email Schema
+class EmailResponse(BaseModel):
     id: int
     to_email: str
     subject: str
