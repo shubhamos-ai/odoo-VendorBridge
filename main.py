@@ -1,13 +1,28 @@
 import os
 import random
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from fastapi import FastAPI, Depends, HTTPException, status, Header
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from typing import List, Optional
+from dotenv import load_dotenv
+import datetime
 import models
 import schemas
+
+# Load environment configuration
+load_dotenv()
+
+# SMTP Configuration
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = os.getenv("SMTP_PORT", "587")
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "")
 
 # Setup SQLite Database
 DATABASE_URL = "sqlite:///./vendor_bridge.db"
@@ -39,8 +54,9 @@ def log_activity(db: Session, actor: str, action: str, entity_type: str, entity_
     db.add(log_entry)
     db.commit()
 
-# Simulated Email Helper
-def send_simulated_email(db: Session, to_email: str, subject: str, body: str):
+# Real/Simulated Email Sending Handler
+def send_email_notification(db: Session, to_email: str, subject: str, body: str):
+    # Always log in database simulated inbox for audit/review
     email_entry = models.SimulatedEmail(
         to_email=to_email,
         subject=subject,
@@ -48,6 +64,30 @@ def send_simulated_email(db: Session, to_email: str, subject: str, body: str):
     )
     db.add(email_entry)
     db.commit()
+    
+    # Send actual email if SMTP parameters are set
+    if SMTP_HOST and SMTP_USER and SMTP_PASSWORD:
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = SMTP_FROM or SMTP_USER
+            msg['To'] = to_email
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+            
+            port = int(SMTP_PORT or 587)
+            if port == 465:
+                server = smtplib.SMTP_SSL(SMTP_HOST, port, timeout=10)
+            else:
+                server = smtplib.SMTP(SMTP_HOST, port, timeout=10)
+                server.starttls()
+                
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(msg['From'], to_email, msg.as_string())
+            server.quit()
+            print(f"Successfully sent email to {to_email} via SMTP")
+        except Exception as e:
+            print(f"Failed to send SMTP email: {e}")
+            log_activity(db, "System", "SMTP Email Failure", "System", None, f"SMTP Error sending to {to_email}: {str(e)}")
 
 # Seed mock database values if empty
 def seed_data():
@@ -119,7 +159,7 @@ seed_data()
 
 # --- API ENDPOINTS ---
 
-# 1. Auth Endpoint (Mock verification for ease of hackathon demo)
+# 1. Auth Endpoint
 @app.post("/api/auth/login")
 def login(login_data: dict, db: Session = Depends(get_db)):
     email = login_data.get("email")
@@ -128,7 +168,6 @@ def login(login_data: dict, db: Session = Depends(get_db)):
     if not user or user.password_hash != password:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
-    # Return user details as a token representation
     return {
         "id": user.id,
         "name": user.name,
@@ -167,7 +206,6 @@ def update_vendor(vendor_id: int, vendor: schemas.VendorCreate, db: Session = De
 @app.get("/api/rfqs", response_model=List[schemas.RFQResponse])
 def get_rfqs(vendor_id: Optional[int] = None, db: Session = Depends(get_db)):
     if vendor_id:
-        # Vendors see only RFQs they are invited to
         return db.query(models.RFQ).join(models.RFQ.vendors).filter(models.Vendor.id == vendor_id).all()
     return db.query(models.RFQ).all()
 
@@ -180,15 +218,13 @@ def get_rfq(rfq_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/rfqs", response_model=schemas.RFQResponse)
 def create_rfq(rfq_in: schemas.RFQCreate, db: Session = Depends(get_db)):
-    # Create RFQ header
     db_rfq = models.RFQ(
         title=rfq_in.title,
         description=rfq_in.description,
         deadline=rfq_in.deadline,
-        status="Sent"  # Automatically sent on creation for MVP flow
+        status="Sent"
     )
     
-    # Associate Vendors
     vendors = db.query(models.Vendor).filter(models.Vendor.id.in_(rfq_in.vendor_ids)).all()
     db_rfq.vendors = vendors
     
@@ -196,7 +232,6 @@ def create_rfq(rfq_in: schemas.RFQCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_rfq)
     
-    # Add items
     for item in rfq_in.items:
         db_item = models.RFQItem(rfq_id=db_rfq.id, **item.dict())
         db.add(db_item)
@@ -204,10 +239,9 @@ def create_rfq(rfq_in: schemas.RFQCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_rfq)
     
-    # Log and trigger email mock
     log_activity(db, "Procurement Officer", f"Created and Published RFQ: {db_rfq.title}", "RFQ", db_rfq.id, f"Assigned to {len(vendors)} vendors.")
     for vendor in vendors:
-        send_simulated_email(
+        send_email_notification(
             db,
             to_email=vendor.email,
             subject=f"New Invitation to Bid: {db_rfq.title}",
@@ -228,14 +262,12 @@ def get_quotations(rfq_id: Optional[int] = None, vendor_id: Optional[int] = None
 
 @app.post("/api/quotations", response_model=schemas.QuotationResponse)
 def create_quotation(quote_in: schemas.QuotationCreate, db: Session = Depends(get_db)):
-    # Check if duplicate quote exists
     existing = db.query(models.Quotation).filter(
         models.Quotation.rfq_id == quote_in.rfq_id,
         models.Quotation.vendor_id == quote_in.vendor_id
     ).first()
     
     if existing:
-        # Delete existing and recreate for simple update/override logic
         db.delete(existing)
         db.commit()
 
@@ -282,19 +314,16 @@ def approve_quotation(quote_id: int, approval_in: schemas.ApprovalCreate, db: Se
     if not quote:
         raise HTTPException(status_code=404, detail="Quotation not found")
         
-    # Update quote status
     quote.status = "Approved" if approval_in.decision == "Approved" else "Rejected"
     
-    # Create Approval Record
     db_approval = models.Approval(
         quotation_id=quote.id,
-        approver_id=3,  # Mock ManagerSarah
+        approver_id=3,
         decision=approval_in.decision,
         remarks=approval_in.remarks
     )
     db.add(db_approval)
     
-    # If approved, reject all other quotations for the same RFQ
     if approval_in.decision == "Approved":
         other_quotes = db.query(models.Quotation).filter(
             models.Quotation.rfq_id == quote.rfq_id,
@@ -303,7 +332,6 @@ def approve_quotation(quote_id: int, approval_in: schemas.ApprovalCreate, db: Se
         for o_quote in other_quotes:
             o_quote.status = "Rejected"
             
-        # Update RFQ status
         rfq = db.query(models.RFQ).filter(models.RFQ.id == quote.rfq_id).first()
         if rfq:
             rfq.status = "Closed"
@@ -334,10 +362,9 @@ def generate_purchase_order(data: dict, db: Session = Depends(get_db)):
     if not quote or quote.status != "Approved":
         raise HTTPException(status_code=400, detail="Only approved quotations can generate a PO.")
         
-    # Generate PO
     po_num = f"PO-{random.randint(100000, 999999)}"
     subtotal = quote.total_amount
-    tax = round(subtotal * 0.18, 2)  # GST 18%
+    tax = round(subtotal * 0.18, 2)
     total = subtotal + tax
     
     db_po = models.PurchaseOrder(
@@ -351,17 +378,15 @@ def generate_purchase_order(data: dict, db: Session = Depends(get_db)):
     )
     db.add(db_po)
     
-    # Update quotation state to lock it further
     quote.status = "PO Generated"
     db.commit()
     db.refresh(db_po)
     
     log_activity(db, "Procurement Officer", f"Generated Purchase Order {po_num}", "PurchaseOrder", db_po.id, f"Total: INR {total:.2f}")
     
-    # Simulated email to vendor
     vendor = db.query(models.Vendor).filter(models.Vendor.id == quote.vendor_id).first()
     if vendor:
-        send_simulated_email(
+        send_email_notification(
             db,
             to_email=vendor.email,
             subject=f"Purchase Order Issued: {po_num}",
@@ -381,7 +406,6 @@ def generate_invoice(data: dict, db: Session = Depends(get_db)):
     if not po:
         raise HTTPException(status_code=404, detail="Purchase Order not found")
         
-    # Create Invoice
     invoice_num = f"INV-{random.randint(100000, 999999)}"
     
     db_invoice = models.Invoice(
@@ -413,8 +437,7 @@ def email_invoice(invoice_id: int, data: dict, db: Session = Depends(get_db)):
     invoice.status = "Sent"
     db.commit()
     
-    # Send mock email
-    send_simulated_email(
+    send_email_notification(
         db,
         to_email=to_email,
         subject=f"Invoice Issued: {invoice.invoice_number}",
@@ -435,7 +458,6 @@ def get_emails(db: Session = Depends(get_db)):
     return db.query(models.SimulatedEmail).order_by(models.SimulatedEmail.sent_at.desc()).all()
 
 # --- Serve Frontend SPA ---
-# Expose static assets
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
@@ -444,4 +466,6 @@ def index():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Use environment port if configured, default 8000
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

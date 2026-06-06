@@ -14,8 +14,42 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- App Container -->
-    <div id="app" class="app-layout">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-layout">
+        <div class="login-panel">
+            <div class="login-brand">
+                <i class="fa-solid fa-bridge-water logo-icon"></i>
+                <h1>VendorBridge</h1>
+                <p>Procurement & Vendor Management Portal</p>
+            </div>
+            <div id="login-error-msg" class="login-error" style="display: none;"></div>
+            <form id="form-login">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="login-email" required placeholder="name@vendorbridge.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mt-2">Log In</button>
+            </form>
+            
+            <div class="demo-login-cheat">
+                <h4>Sandbox Demo Users (Quick Click):</h4>
+                <div class="demo-users-buttons">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillLogin('admin@vendorbridge.com', 'admin123')">Admin</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillLogin('officer@vendorbridge.com', 'officer123')">Officer</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillLogin('manager@vendorbridge.com', 'manager123')">Manager</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillLogin('john@acme.com', 'vendor123')">Acme Vendor</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Container (Hidden until logged in) -->
+    <div id="app" class="app-layout" style="display: none;">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="sidebar-brand">
@@ -66,6 +100,9 @@
                         <div class="user-role-badge" id="user-role">admin</div>
                     </div>
                 </div>
+                <button class="btn btn-text btn-sm w-100 mt-3 text-danger" id="btn-logout" style="justify-content: flex-start; padding-left: 0;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Log Out
+                </button>
             </div>
         </aside>
 

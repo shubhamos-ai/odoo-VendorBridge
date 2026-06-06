@@ -1,13 +1,7 @@
 // Global Application State
-let currentUser = {
-    id: 1,
-    name: "Admin User",
-    email: "admin@vendorbridge.com",
-    role: "admin",
-    vendor_id: null
-};
+let currentUser = null;
 
-// Available Mock roles mapping
+// Available Mock roles mapping (used for the developer switcher widget)
 const mockRoles = {
     'admin': { id: 1, name: "Admin User", email: "admin@vendorbridge.com", role: "admin", vendor_id: null },
     'officer': { id: 2, name: "Officer Shubh", email: "officer@vendorbridge.com", role: "officer", vendor_id: null },
@@ -19,18 +13,108 @@ const mockRoles = {
 
 // Initialize Application
 document.addEventListener("DOMContentLoaded", () => {
+    checkSession();
     setupRouter();
     setupRoleSwitcher();
     setupEventListeners();
-    
-    // Default Load
-    loadCurrentView();
+    setupLoginHandler();
 });
 
-// 1. Client-Side Router
+// Check local storage session
+function checkSession() {
+    const savedUser = localStorage.getItem("vendorbridge_user");
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        unlockApp();
+    } else {
+        lockApp();
+    }
+}
+
+// Lock application (show login screen)
+function lockApp() {
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("app").style.display = "none";
+}
+
+// Unlock application
+function unlockApp() {
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app").style.display = "flex";
+    
+    // Update User UI layout
+    document.getElementById("user-name").innerText = currentUser.name;
+    document.getElementById("user-role").innerText = currentUser.role;
+    document.getElementById("user-avatar").innerText = currentUser.name.split(" ").map(w => w[0]).join("");
+    
+    // Set switcher dropdown to correct state
+    const selector = document.getElementById("role-select");
+    if (currentUser.role === 'vendor') {
+        if (currentUser.vendor_id === 1) selector.value = 'vendor-1';
+        else if (currentUser.vendor_id === 2) selector.value = 'vendor-2';
+        else if (currentUser.vendor_id === 3) selector.value = 'vendor-3';
+    } else {
+        selector.value = currentUser.role;
+    }
+
+    updateVisibilityForRole();
+    loadCurrentView();
+}
+
+// Quick fill function
+function quickFillLogin(email, password) {
+    document.getElementById("login-email").value = email;
+    document.getElementById("login-password").value = password;
+}
+
+// 1. Setup Auth and Logins
+function setupLoginHandler() {
+    const form = document.getElementById("form-login");
+    const errorMsg = document.getElementById("login-error-msg");
+    
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorMsg.style.display = "none";
+        
+        const email = document.getElementById("login-email").value;
+        const password = document.getElementById("login-password").value;
+        
+        try {
+            const res = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                currentUser = data;
+                localStorage.setItem("vendorbridge_user", JSON.stringify(currentUser));
+                unlockApp();
+            } else {
+                const err = await res.json();
+                errorMsg.innerText = err.detail || "Authentication failed.";
+                errorMsg.style.display = "block";
+            }
+        } catch(err) {
+            console.error("Login request error:", err);
+            errorMsg.innerText = "Connection error. Please check backend.";
+            errorMsg.style.display = "block";
+        }
+    });
+
+    // Logout
+    document.getElementById("btn-logout").addEventListener("click", () => {
+        localStorage.removeItem("vendorbridge_user");
+        currentUser = null;
+        lockApp();
+    });
+}
+
+// 2. Client-Side Router
 function setupRouter() {
     window.addEventListener("hashchange", () => {
-        loadCurrentView();
+        if (currentUser) loadCurrentView();
     });
 }
 
@@ -50,11 +134,9 @@ function loadCurrentView() {
     if (targetView) {
         targetView.classList.add("active");
         
-        // Highlight active menu item
         const navItem = document.getElementById(`nav-${hash.replace("#", "")}`);
         if (navItem) navItem.classList.add("active");
         
-        // Update Title
         const titleMap = {
             "#dashboard": "Procurement Overview",
             "#vendors": "Vendor Partner Directory",
@@ -67,12 +149,11 @@ function loadCurrentView() {
         };
         document.getElementById("page-title").innerText = titleMap[hash] || "VendorBridge";
         
-        // Trigger specific data loaders
         triggerDataLoader(hash);
     }
 }
 
-// 2. Data Loaders Dispatcher
+// Data Loaders Dispatcher
 function triggerDataLoader(hash) {
     switch(hash) {
         case "#dashboard":
@@ -102,43 +183,38 @@ function triggerDataLoader(hash) {
     }
 }
 
-// 3. User & Role Switching
+// User & Role Switching Dropdown
 function setupRoleSwitcher() {
     const selector = document.getElementById("role-select");
     selector.addEventListener("change", (e) => {
         const selectedKey = e.target.value;
         currentUser = mockRoles[selectedKey];
         
+        // Update Local Storage
+        localStorage.setItem("vendorbridge_user", JSON.stringify(currentUser));
+        
         // Update User UI layout
         document.getElementById("user-name").innerText = currentUser.name;
         document.getElementById("user-role").innerText = currentUser.role;
         document.getElementById("user-avatar").innerText = currentUser.name.split(" ").map(w => w[0]).join("");
         
-        // Adjust elements visibility based on role access
         updateVisibilityForRole();
-        
-        // Reload current view with new scope
         loadCurrentView();
     });
-    
-    // Set initial layout
-    updateVisibilityForRole();
 }
 
 function updateVisibilityForRole() {
+    if (!currentUser) return;
     const isOfficer = currentUser.role === 'officer';
     const isAdmin = currentUser.role === 'admin';
     const isVendor = currentUser.role === 'vendor';
     
-    // Add Vendor / RFQ action buttons
     document.getElementById("btn-add-vendor-modal").style.display = isAdmin ? "inline-flex" : "none";
     document.getElementById("btn-create-rfq-modal").style.display = isOfficer ? "inline-flex" : "none";
-    
-    // Vendor banner
     document.getElementById("quotations-vendor-banner").style.display = isVendor ? "block" : "none";
 }
 
-// 4. Data Loaders & API Functions
+// Data Loaders & API Functions
 async function loadDashboard() {
     try {
         const rfqsRes = await fetch("/api/rfqs");
@@ -147,14 +223,11 @@ async function loadDashboard() {
         const vendorsRes = await fetch("/api/vendors");
         const vendors = await vendorsRes.json();
         
-        const posRes = await fetch("/api/purchase_orders");
+        const posRes = await fetch("/api/purchase-orders");
         const pos = await posRes.json();
         
         const quotesRes = await fetch("/api/quotations");
         const quotes = await quotesRes.json();
-        
-        const invoicesRes = await fetch("/api/invoices");
-        const invoices = await invoicesRes.json();
 
         // Render KPI metrics
         const kpiGrid = document.getElementById("kpi-cards");
@@ -308,7 +381,6 @@ async function loadQuotations() {
         const res = await fetch(url);
         const quotes = await res.json();
         
-        // Fetch RFQ data to match titles
         const rfqRes = await fetch("/api/rfqs");
         const rfqs = await rfqRes.json();
         
@@ -324,7 +396,6 @@ async function loadQuotations() {
             const rfq = rfqs.find(r => r.id === q.rfq_id);
             let action = "";
             
-            // Approval flow actions
             if (currentUser.role === 'manager' && q.status === 'Submitted') {
                 action = `
                     <button class="btn btn-primary btn-sm" onclick="handleDecision(${q.id}, 'Approved')"><i class="fa-solid fa-check"></i> Approve</button>
@@ -487,7 +558,6 @@ async function loadEmails() {
 
 // 5. Setup Action Modals and Event Listeners
 function setupEventListeners() {
-    // Add Vendor Modal Action
     const addVendorBtn = document.getElementById("btn-add-vendor-modal");
     if (addVendorBtn) {
         addVendorBtn.addEventListener("click", () => {
@@ -495,7 +565,6 @@ function setupEventListeners() {
         });
     }
     
-    // Vendor registration Form submit
     document.getElementById("form-add-vendor").addEventListener("submit", async (e) => {
         e.preventDefault();
         const payload = {
@@ -523,11 +592,9 @@ function setupEventListeners() {
         }
     });
 
-    // Add RFQ Modal Action
     const addRFQBtn = document.getElementById("btn-create-rfq-modal");
     if (addRFQBtn) {
         addRFQBtn.addEventListener("click", async () => {
-            // Populate vendor choices dynamically in form checkbox group
             const res = await fetch("/api/vendors");
             const vendors = await res.json();
             const group = document.getElementById("rfq-vendors-checkboxes");
@@ -544,7 +611,6 @@ function setupEventListeners() {
         });
     }
 
-    // Dynamic line item addition inside RFQ form
     document.getElementById("btn-add-rfq-item").addEventListener("click", () => {
         const itemContainer = document.getElementById("rfq-items-container");
         const newRow = document.createElement("div");
@@ -566,11 +632,9 @@ function setupEventListeners() {
         itemContainer.appendChild(newRow);
     });
 
-    // Create RFQ form submission
     document.getElementById("form-create-rfq").addEventListener("submit", async (e) => {
         e.preventDefault();
         
-        // Grab values
         const checkedVendors = Array.from(document.querySelectorAll('input[name="rfq-vendor-chk"]:checked')).map(el => parseInt(el.value));
         if (checkedVendors.length === 0) {
             alert("Please select at least one vendor partner.");
@@ -611,7 +675,6 @@ function setupEventListeners() {
         }
     });
 
-    // Quotation Bid Submission Form
     document.getElementById("form-submit-quote").addEventListener("submit", async (e) => {
         e.preventDefault();
         const rfqId = parseInt(document.getElementById("q-rfq-id").value);
@@ -704,7 +767,6 @@ async function openCompareModal(rfqId) {
             return;
         }
 
-        // Find the lowest bid automatically to highlight
         const lowestBid = Math.min(...quotes.map(q => q.total_amount));
 
         quotes.forEach(q => {
@@ -746,7 +808,6 @@ async function openCompareModal(rfqId) {
     }
 }
 
-// Shortcut: Shortcut logic to approve a bid directly from comparison dashboard
 async function managerCompareApprove(quoteId) {
     if (confirm("Send this quote to Manager for approval?")) {
         try {
@@ -813,7 +874,6 @@ async function generateInvoice(poId) {
     }
 }
 
-// Email invoice action
 async function promptEmailInvoice(invoiceId) {
     const email = prompt("Enter recipient email address:");
     if (!email) return;
@@ -920,7 +980,6 @@ async function viewDocument(docId, type) {
             const invoices = await res.json();
             const inv = invoices.find(i => i.id === docId);
             
-            // Get PO reference for names
             const poRes = await fetch("/api/purchase_orders");
             const pos = await poRes.json();
             const po = pos.find(p => p.id === inv.po_id);

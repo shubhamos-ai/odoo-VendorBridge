@@ -10,14 +10,14 @@ Base = declarative_base()
 rfq_vendor_association = Table(
     'rfq_vendor_association',
     Base.metadata,
-    Column('rfq_id', Integer, ForeignKey('rfqs.id', ondelete='CASCADE'), primaryKey=True),
-    Column('vendor_id', Integer, ForeignKey('vendors.id', ondelete='CASCADE'), primaryKey=True)
+    Column('rfq_id', Integer, ForeignKey('rfqs.id', ondelete='CASCADE'), primary_key=True),
+    Column('vendor_id', Integer, ForeignKey('vendors.id', ondelete='CASCADE'), primary_key=True)
 )
 
 class User(Base):
     __tablename__ = 'users'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     role = Column(String, nullable=False)  # admin, officer, manager, vendor
@@ -30,7 +30,7 @@ class User(Base):
 class Vendor(Base):
     __tablename__ = 'vendors'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     category = Column(String, nullable=False)
     gst_number = Column(String, nullable=False)
@@ -50,7 +50,7 @@ class Vendor(Base):
 class RFQ(Base):
     __tablename__ = 'rfqs'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     deadline = Column(String, nullable=False)  # YYYY-MM-DD
@@ -65,7 +65,7 @@ class RFQ(Base):
 class RFQItem(Base):
     __tablename__ = 'rfq_items'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     rfq_id = Column(Integer, ForeignKey('rfqs.id', ondelete='CASCADE'), nullable=False)
     item_name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
@@ -78,7 +78,7 @@ class RFQItem(Base):
 class Quotation(Base):
     __tablename__ = 'quotations'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     rfq_id = Column(Integer, ForeignKey('rfqs.id', ondelete='CASCADE'), nullable=False)
     vendor_id = Column(Integer, ForeignKey('vendors.id', ondelete='CASCADE'), nullable=False)
     status = Column(String, default="Draft")  # Draft, Submitted, Shortlisted, Approved, Rejected
@@ -96,7 +96,7 @@ class Quotation(Base):
 class QuotationItem(Base):
     __tablename__ = 'quotation_items'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     quotation_id = Column(Integer, ForeignKey('quotations.id', ondelete='CASCADE'), nullable=False)
     rfq_item_id = Column(Integer, ForeignKey('rfq_items.id', ondelete='CASCADE'), nullable=False)
     unit_price = Column(Float, nullable=False)
@@ -109,7 +109,7 @@ class QuotationItem(Base):
 class Approval(Base):
     __tablename__ = 'approvals'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     quotation_id = Column(Integer, ForeignKey('quotations.id', ondelete='CASCADE'), nullable=False)
     approver_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     decision = Column(String, nullable=False)  # Approved, Rejected
@@ -121,7 +121,7 @@ class Approval(Base):
 class PurchaseOrder(Base):
     __tablename__ = 'purchase_orders'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     po_number = Column(String, unique=True, index=True, nullable=False)
     quotation_id = Column(Integer, ForeignKey('quotations.id'), nullable=False)
     vendor_id = Column(Integer, ForeignKey('vendors.id'), nullable=False)
@@ -138,7 +138,7 @@ class PurchaseOrder(Base):
 class Invoice(Base):
     __tablename__ = 'invoices'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     invoice_number = Column(String, unique=True, index=True, nullable=False)
     po_id = Column(Integer, ForeignKey('purchase_orders.id'), nullable=False)
     subtotal = Column(Float, nullable=False)
@@ -153,7 +153,7 @@ class Invoice(Base):
 class ActivityLog(Base):
     __tablename__ = 'activity_logs'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     actor_name = Column(String, nullable=False)
     action = Column(String, nullable=False)
     entity_type = Column(String, nullable=False)  # User, Vendor, RFQ, Quotation, PO, Invoice
@@ -164,7 +164,7 @@ class ActivityLog(Base):
 class SimulatedEmail(Base):
     __tablename__ = 'simulated_emails'
     
-    id = Column(Integer, primaryKey=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     to_email = Column(String, nullable=False)
     subject = Column(String, nullable=False)
     body = Column(Text, nullable=False)

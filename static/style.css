@@ -892,3 +892,88 @@ body {
         display: none !important;
     }
 }
+
+/* Login screen layout and animations */
+.login-layout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.15), transparent),
+                radial-gradient(circle at bottom left, rgba(6, 182, 212, 0.15), transparent),
+                var(--bg-primary);
+    padding: 24px;
+}
+
+.login-panel {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 440px;
+    padding: 40px;
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(10px);
+}
+
+.login-brand {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.login-brand h1 {
+    font-family: var(--font-heading);
+    font-size: 32px;
+    font-weight: 800;
+    margin-top: 12px;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--text-primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.login-brand p {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.login-error {
+    background-color: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 13px;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.demo-login-cheat {
+    margin-top: 32px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 24px;
+}
+
+.demo-login-cheat h4 {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.demo-users-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.w-100 {
+    width: 100%;
+}
+
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-4 { margin-bottom: 24px; }
+.mr-2 { margin-right: 8px; }
