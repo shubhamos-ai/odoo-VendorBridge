@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VendorBridge ERP - Procurement & Vendor Management</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- App Container -->
+    <div id="app" class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-bridge-water logo-icon"></i>
+                <span class="brand-text">VendorBridge</span>
+            </div>
+            
+            <nav class="sidebar-menu">
+                <a href="#dashboard" class="menu-item active" id="nav-dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#vendors" class="menu-item" id="nav-vendors">
+                    <i class="fa-solid fa-handshake"></i>
+                    <span>Vendors</span>
+                </a>
+                <a href="#rfqs" class="menu-item" id="nav-rfqs">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    <span>RFQs</span>
+                </a>
+                <a href="#quotations" class="menu-item" id="nav-quotations">
+                    <i class="fa-solid fa-file-signature"></i>
+                    <span>Quotations</span>
+                </a>
+                <a href="#purchase_orders" class="menu-item" id="nav-purchase_orders">
+                    <i class="fa-solid fa-file-contract"></i>
+                    <span>Purchase Orders</span>
+                </a>
+                <a href="#invoices" class="menu-item" id="nav-invoices">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>Invoices</span>
+                </a>
+                <a href="#logs" class="menu-item" id="nav-logs">
+                    <i class="fa-solid fa-history"></i>
+                    <span>Activity Logs</span>
+                </a>
+                <a href="#emails" class="menu-item" id="nav-emails">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                    <span>Simulated Inbox</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar" id="user-avatar">AD</div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-name">Admin User</div>
+                        <div class="user-role-badge" id="user-role">admin</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Topbar Header -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <h1 class="page-title" id="page-title">Dashboard</h1>
+                </div>
+                <div class="topbar-right">
+                    <!-- Quick Role Switcher widget -->
+                    <div class="role-switcher-container">
+                        <label for="role-select"><i class="fa-solid fa-user-gear"></i> Test Role Switcher:</label>
+                        <select id="role-select" class="role-select">
+                            <option value="admin">Admin</option>
+                            <option value="officer">Procurement Officer</option>
+                            <option value="manager">Manager / Approver</option>
+                            <option value="vendor-1">Vendor: Acme Industrial</option>
+                            <option value="vendor-2">Vendor: Globex Tech</option>
+                            <option value="vendor-3">Vendor: Apex Supplies</option>
+                        </select>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Views Containers -->
+            <div class="view-viewport">
+                
+                <!-- View 1: Dashboard -->
+                <section id="view-dashboard" class="app-view active">
+                    <!-- KPI Cards Row -->
+                    <div class="kpi-grid" id="kpi-cards">
+                        <!-- Dynamic KPIs go here -->
+                    </div>
+
+                    <!-- Layout Dashboard Sections -->
+                    <div class="dashboard-widgets-grid">
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h3>Recent Active RFQs</h3>
+                                <a href="#rfqs" class="btn btn-text">View All <i class="fa-solid fa-arrow-right"></i></a>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>RFQ ID</th>
+                                            <th>Title</th>
+                                            <th>Deadline</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dash-rfqs-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h3>Pending Quotations for Approval</h3>
+                                <a href="#quotations" class="btn btn-text">View All <i class="fa-solid fa-arrow-right"></i></a>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>RFQ</th>
+                                            <th>Vendor</th>
+                                            <th>Total</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dash-approvals-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 2: Vendors -->
+                <section id="view-vendors" class="app-view">
+                    <div class="section-actions">
+                        <div class="search-bar">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="search-vendor" placeholder="Search vendors by name, GST or category...">
+                        </div>
+                        <button class="btn btn-primary" id="btn-add-vendor-modal" style="display:none;">
+                            <i class="fa-solid fa-plus"></i> Add New Vendor
+                        </button>
+                    </div>
+                    <div class="card table-card">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Category</th>
+                                        <th>GSTIN</th>
+                                        <th>Contact Person</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Rating</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vendors-list-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 3: RFQs -->
+                <section id="view-rfqs" class="app-view">
+                    <div class="section-actions">
+                        <div class="search-bar">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="search-rfq" placeholder="Search RFQs...">
+                        </div>
+                        <button class="btn btn-primary" id="btn-create-rfq-modal" style="display:none;">
+                            <i class="fa-solid fa-paper-plane"></i> Create & Send RFQ
+                        </button>
+                    </div>
+                    <div class="card table-card">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Title</th>
+                                        <th>Invited Vendors</th>
+                                        <th>Deadline</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rfqs-list-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 4: Quotations -->
+                <section id="view-quotations" class="app-view">
+                    <div class="card info-card text-center mb-4" id="quotations-vendor-banner" style="display:none;">
+                        <i class="fa-solid fa-bullhorn text-accent mb-2" style="font-size: 24px;"></i>
+                        <p>Submit your quotations for assigned RFQs below. Only RFQs where you are invited will be listed.</p>
+                    </div>
+                    <div class="card table-card">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Quotation ID</th>
+                                        <th>RFQ Title</th>
+                                        <th>Vendor</th>
+                                        <th>Delivery Days</th>
+                                        <th>Total Bid (INR)</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="quotations-list-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 5: Purchase Orders -->
+                <section id="view-purchase_orders" class="app-view">
+                    <div class="card table-card">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>PO Number</th>
+                                        <th>Quotation ID</th>
+                                        <th>Vendor</th>
+                                        <th>Subtotal</th>
+                                        <th>Tax (18%)</th>
+                                        <th>Grand Total</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="po-list-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 6: Invoices -->
+                <section id="view-invoices" class="app-view">
+                    <div class="card table-card">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice Number</th>
+                                        <th>PO Reference</th>
+                                        <th>Subtotal</th>
+                                        <th>Tax</th>
+                                        <th>Total Amount</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoice-list-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 7: Activity Logs -->
+                <section id="view-logs" class="app-view">
+                    <div class="timeline-container" id="timeline-logs">
+                        <!-- Dynamic timeline log list -->
+                    </div>
+                </section>
+
+                <!-- View 8: Simulated Inbox -->
+                <section id="view-emails" class="app-view">
+                    <div class="card info-card mb-4">
+                        <p><i class="fa-solid fa-circle-info text-primary"></i> Outgoing emails from the VendorBridge system are captured below for quick review and verification.</p>
+                    </div>
+                    <div id="email-inbox-list" class="email-inbox-grid">
+                        <!-- Simulated emails list -->
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals & Overlay screens -->
+
+    <!-- Modal 1: Create Vendor (Admin Only) -->
+    <div id="modal-vendor" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Add New Vendor Partner</h2>
+                <button class="btn-close" onclick="closeModal('modal-vendor')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-add-vendor">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Vendor Business Name</label>
+                        <input type="text" id="v-name" required placeholder="e.g. Reliance Tech Ltd">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="v-category">
+                            <option value="Raw Materials">Raw Materials</option>
+                            <option value="IT Infrastructure">IT Infrastructure</option>
+                            <option value="Office Stationery">Office Stationery</option>
+                            <option value="Logistics">Logistics</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>GST Number (GSTIN)</label>
+                        <input type="text" id="v-gst" required placeholder="15-digit GST Code">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Name</label>
+                        <input type="text" id="v-contact" required placeholder="e.g. Mukesh K">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="v-email" required placeholder="vendor@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="v-phone" required placeholder="+91 ...">
+                    </div>
+                    <div class="form-group span-2">
+                        <label>Complete Office Address</label>
+                        <textarea id="v-address" required placeholder="Enter postal address..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-vendor')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Vendor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Create RFQ (Officer Only) -->
+    <div id="modal-rfq" class="modal-overlay">
+        <div class="modal-card modal-large">
+            <div class="modal-header">
+                <h2>Create Request for Quotation (RFQ)</h2>
+                <button class="btn-close" onclick="closeModal('modal-rfq')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-create-rfq">
+                <div class="form-group">
+                    <label>RFQ Subject / Title</label>
+                    <input type="text" id="rfq-title" required placeholder="e.g. Procurement of Laptop Batches for Engineering Team">
+                </div>
+                <div class="form-group">
+                    <label>Description & Specifications</label>
+                    <textarea id="rfq-desc" placeholder="Provide specs, warranties, SLA terms, delivery expectations..."></textarea>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Submission Deadline</label>
+                        <input type="date" id="rfq-deadline" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Vendors to Invite (Multiple)</label>
+                        <div id="rfq-vendors-checkboxes" class="checkbox-group-container">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 class="subsection-title">Required Line Items</h3>
+                <div id="rfq-items-container">
+                    <div class="item-row form-grid">
+                        <div class="form-group span-2">
+                            <label>Item Name / Title</label>
+                            <input type="text" class="item-name" required placeholder="e.g. Lenovo Thinkpad L14 Gen 4">
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="number" class="item-qty" min="1" required placeholder="10">
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <input type="text" class="item-unit" value="pcs" required placeholder="pcs">
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm mb-4" id="btn-add-rfq-item">
+                    <i class="fa-solid fa-plus"></i> Add Line Item
+                </button>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-rfq')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Publish and Invite Vendors</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Quotation Comparison & Shortlist / Decision -->
+    <div id="modal-compare" class="modal-overlay">
+        <div class="modal-card modal-large">
+            <div class="modal-header">
+                <h2>Quotation Comparison Dashboard</h2>
+                <button class="btn-close" onclick="closeModal('modal-compare')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="compare-meta mb-4">
+                <h3 id="compare-rfq-title">RFQ Title</h3>
+                <p id="compare-rfq-desc">RFQ Description</p>
+            </div>
+            
+            <div class="comparison-scroll-container">
+                <div class="comparison-matrix" id="comparison-matrix-body">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-compare')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Submit Quotation (Vendor Only) -->
+    <div id="modal-quote" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Submit Quotation Bid</h2>
+                <button class="btn-close" onclick="closeModal('modal-quote')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-submit-quote">
+                <input type="hidden" id="q-rfq-id">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Delivery Timeline (in days)</label>
+                        <input type="number" id="q-timeline" required min="1" placeholder="e.g. 7">
+                    </div>
+                </div>
+                
+                <h3 class="subsection-title">Quote Unit Price Details</h3>
+                <div id="quote-items-container">
+                    <!-- Dynamically listed fields based on RFQ items -->
+                </div>
+
+                <div class="form-group">
+                    <label>Vendor Notes & Special Terms</label>
+                    <textarea id="q-notes" placeholder="Optional notes..."></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-quote')">Cancel</button>
+                    <button type="submit" class="btn btn-accent">Submit Quotation Bid</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 5: Document View (PO or Invoice Print & Export Preview) -->
+    <div id="modal-doc" class="modal-overlay">
+        <div class="modal-card modal-doc-preview">
+            <div class="modal-header no-print">
+                <h2>Document Viewer</h2>
+                <div>
+                    <button class="btn btn-primary btn-sm mr-2" onclick="window.print()">
+                        <i class="fa-solid fa-print"></i> Print / PDF
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-doc')">Close</button>
+                </div>
+            </div>
+            <!-- Standard document frame -->
+            <div class="printable-doc" id="doc-printable-area">
+                <!-- Dynamically loaded invoice / purchase order structure -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
