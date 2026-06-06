@@ -1,0 +1,10 @@
+# Project dependencies for Odoo VendorBridge
+fastapi>=0.110.0
+uvicorn[standard]>=0.30.0
+sqlalchemy>=2.0.30
+pydantic>=2.7.0
+python-dotenv>=1.0.1
+# Optional: for password hashing (if needed in future)
+passlib[bcrypt]>=1.7.4
+# For testing (optional)
+pytest>=8.2.0
