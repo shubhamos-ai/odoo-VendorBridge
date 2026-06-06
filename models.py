@@ -160,8 +160,8 @@ class ActivityLog(Base):
     details = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-class SimulatedEmail(Base):
-    __tablename__ = 'simulated_emails'
+class Email(Base):
+    __tablename__ = 'emails'
     
     id = Column(Integer, primary_key=True, index=True)
     to_email = Column(String, nullable=False)

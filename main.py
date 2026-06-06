@@ -50,7 +50,7 @@ def log_activity(db: Session, actor: str, action: str, entity_type: str, entity_
     db.commit()
 
 def send_email_notification(db: Session, to_email: str, subject: str, body: str):
-    email_entry = models.SimulatedEmail(
+    email_entry = models.Email(
         to_email=to_email,
         subject=subject,
         body=body
@@ -81,7 +81,9 @@ def send_email_notification(db: Session, to_email: str, subject: str, body: str)
 def seed_data():
     db = SessionLocal()
     try:
+        # Seed vendors and users only if empty
         if db.query(models.User).count() == 0:
+            # Vendors
             v1 = models.Vendor(
                 name="Acme Industrial Corp", category="Raw Materials",
                 gst_number="27AAAAA1111A1Z1", contact_name="John Doe",
@@ -105,6 +107,8 @@ def seed_data():
             )
             db.add_all([v1, v2, v3])
             db.commit()
+
+            # Users
             admin = models.User(
                 name="Admin User", email="admin@vendorbridge.com",
                 role="admin", password_hash="admin123"
@@ -132,6 +136,103 @@ def seed_data():
             db.add_all([admin, officer, manager, vendor_user1, vendor_user2, vendor_user3])
             db.commit()
             log_activity(db, "System", "Database Seeded", "System", None, "Initial data and roles created successfully.")
+            # Seed a sample RFQ workflow if none exist
+            if db.query(models.RFQ).count() == 0:
+                # Create RFQ
+                rfq = models.RFQ(
+                    title="Procure 100 Laptops",
+                    description="Need 100 high‑performance laptops for new hires.",
+                    deadline="2026-07-15",
+                    status="Sent"
+                )
+                # Assign all vendors to the RFQ
+                rfq.vendors = db.query(models.Vendor).all()
+                # RFQ item
+                item = models.RFQItem(
+                    item_name="Laptop Model X",
+                    description="15‑inch, 16GB RAM, 512GB SSD",
+                    quantity=100,
+                    unit="pcs"
+                )
+                rfq.items.append(item)
+                db.add(rfq)
+                db.commit()
+                db.refresh(rfq)
+                log_activity(db, "Officer Shubh", f"Created RFQ #{rfq.id}", "RFQ", rfq.id, "Sent to all vendors.")
+
+                # Create a quotation from the first vendor
+                quotation = models.Quotation(
+                    rfq_id=rfq.id,
+                    vendor_id=v1.id,
+                    delivery_timeline=30,
+                    notes="Delivery within 30 days.",
+                    status="Submitted",
+                    submitted_at=datetime.datetime.utcnow()
+                )
+                db.add(quotation)
+                db.commit()
+                db.refresh(quotation)
+                # Quotation line item
+                q_item = models.QuotationItem(
+                    quotation_id=quotation.id,
+                    rfq_item_id=item.id,
+                    unit_price=55000.0,
+                    quantity=100,
+                    line_total=5500000.0
+                )
+                db.add(q_item)
+                db.commit()
+                log_activity(db, "Vendor Acme", f"Submitted quotation #{quotation.id}", "Quotation", quotation.id, "Total 5,500,000 INR")
+
+                # Approval by manager
+                approval = models.Approval(
+                    quotation_id=quotation.id,
+                    approver_id=manager.id,
+                    decision="Approved",
+                    remarks="All good"
+                )
+                db.add(approval)
+                db.commit()
+                log_activity(db, "Manager Sarah", f"Approved quotation #{quotation.id}", "Approval", approval.id, "Proceed to PO")
+
+                # Generate Purchase Order
+                po = models.PurchaseOrder(
+                    po_number=f"PO-{random.randint(100000, 999999)}",
+                    quotation_id=quotation.id,
+                    vendor_id=v1.id,
+                    subtotal=quotation.total_amount if quotation.total_amount else 5500000.0,
+                    tax=round((quotation.total_amount if quotation.total_amount else 5500000.0) * 0.18, 2),
+                    total=round((quotation.total_amount if quotation.total_amount else 5500000.0) * 1.18, 2),
+                    status="Sent"
+                )
+                db.add(po)
+                db.commit()
+                db.refresh(po)
+                log_activity(db, "Officer Shubh", f"Generated PO {po.po_number}", "PurchaseOrder", po.id, "Sent to vendor.")
+
+                # Create Invoice
+                invoice = models.Invoice(
+                    invoice_number=f"INV-{random.randint(100000, 999999)}",
+                    po_id=po.id,
+                    subtotal=po.subtotal,
+                    tax=po.tax,
+                    total=po.total,
+                    status="Draft"
+                )
+                db.add(invoice)
+                db.commit()
+                db.refresh(invoice)
+                log_activity(db, "Officer Shubh", f"Created Invoice {invoice.invoice_number}", "Invoice", invoice.id, "Draft ready.")
+
+                # Record an email entry (real email entry)
+                email_entry = models.Email(
+                    to_email=v1.email,
+                    subject=f"Purchase Order {po.po_number} Issued",
+                    body=f"Dear {v1.contact_name},\n\nYour purchase order {po.po_number} has been issued. Total amount INR {po.total:.2f}.\n\nRegards,\nProcurement Team"
+                )
+                db.add(email_entry)
+                db.commit()
+                log_activity(db, "System", "Email Sent", "Email", email_entry.id, f"PO email sent to {v1.email}")
     except Exception as e:
         print(f"Error seeding database: {e}")
     finally:
@@ -385,9 +486,9 @@ def email_invoice(invoice_id: int, data: dict, db: Session = Depends(get_db)):
 def get_logs(db: Session = Depends(get_db)):
     return db.query(models.ActivityLog).order_by(models.ActivityLog.created_at.desc()).all()
 
-@app.get("/api/emails", response_model=List[schemas.SimulatedEmailResponse])
+@app.get("/api/emails", response_model=List[schemas.EmailResponse])
 def get_emails(db: Session = Depends(get_db)):
-    return db.query(models.SimulatedEmail).order_by(models.SimulatedEmail.sent_at.desc()).all()
+    return db.query(models.Email).order_by(models.Email.sent_at.desc()).all()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
